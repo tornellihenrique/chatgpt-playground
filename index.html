@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="">
+  <meta name="author" content="Henrique Tornelli Duarte">
+
+  <title>ChatGPT Playground</title>
+
+  <link rel="canonical" href="https://getbootstrap.com/docs/5.0/examples/headers/">
+
+  <!-- Bootstrap core CSS -->
+  <link href="assets/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- JQuery -->
+  <script src="assets/jquery/jquery-3.6.4.min.js"></script>
+
+  <style>
+    .bd-placeholder-img {
+      font-size: 1.125rem;
+      text-anchor: middle;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      user-select: none;
+    }
+
+    @media (min-width: 768px) {
+      .bd-placeholder-img-lg {
+        font-size: 3.5rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <main>
+
+    <header class="py-3 mb-3 border-bottom">
+      <div class="container-fluid d-grid gap-3 align-items-center" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+        <div class="d-flex align-items-center">
+          <form class="w-100">
+            <input id="api-key" type="password" class="form-control" placeholder="API Key" aria-label="API Key">
+          </form>
+        </div>
+        <div class="d-flex align-items-center">
+          <form class="w-100">
+            <select id="model" class="form-control" aria-label="Model">
+              <option selected>text-davinci-003</option>
+              <option>text-davinci-002</option>
+              <option>text-curie-001</option>
+              <option>text-babbage-001</option>
+              <option>text-ada-001</option>
+            </select>
+          </form>
+        </div>
+        <div class="d-flex align-items-center">
+          <form class="w-100">
+            <input id="tokens" type="number" class="form-control" placeholder="Tokens" aria-label="Tokens">
+          </form>
+        </div>
+        <div class="d-flex align-items-center">
+          <form class="w-100">
+            <input id="temperature" type="number" class="form-control" placeholder="Temperature"
+              aria-label="Temperature">
+          </form>
+        </div>
+      </div>
+    </header>
+
+    <div class="container-fluid">
+      <div class="d-grid gap-3" style="grid-template-columns: 1fr 1fr; min-height: 400px;">
+        <textarea class="bg-light border rounded-3" id="prompt">Prompt...</textarea>
+        <div class="bg-light border rounded-3" id="response"></div>
+      </div>
+
+      <div class="my-2"></div>
+
+      <div class="d-flex justify-content-center">
+        <button type="button" class="btn btn-primary" id="submit">Send</button>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="assets/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // ChatGPT API url
+    const apiUrl = 'https://api.openai.com/v1/completions';
+
+    function saveData(data) {
+      localStorage.setItem('chatgpt-playground-data', JSON.stringify(data));
+    }
+
+    function getData() {
+      const data = localStorage.getItem('chatgpt-playground-data');
+      if (data) return JSON.parse(data);
+      return null;
+    }
+
+    function toggleLoading(value = false) {
+      $('#submit').prop('disabled', value);
+    }
+
+    async function sendRequest(url, key, data) {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + key,
+        },
+        body: JSON.stringify(data),
+      });
+      return response.json();
+    }
+
+    $('#submit').on('click', () => {
+      const apiKey = $('#api-key').val();
+
+      const prompt = $('#prompt').val();
+
+      const model = $('#model').val();
+      const max_tokens = Number($('#tokens').val());
+      const temperature = Number($('#temperature').val()) || 0;
+
+      if ([apiKey, prompt, model, tokens].some(val => !val)) {
+        alert('Please fill all inputs!');
+
+        return;
+      }
+
+      console.log(apiKey, model, max_tokens, temperature);
+
+      toggleLoading(true);
+
+      $('#response').html('');
+
+      const requestData = { model, max_tokens, temperature, prompt };
+
+      saveData({ ...requestData, apiKey });
+
+      sendRequest(apiUrl, apiKey, requestData)
+        .then(response => {
+          console.log('API Response:', response);
+
+          if (response && response.choices) {
+            const text = response.choices.map(c => c.text).filter(t => !!t).reduce((acc, curr) => acc + curr, '');
+
+            $('#response').html(text);
+          }
+        })
+        .catch(err => console.error('API Error:', err))
+        .finally(() => {
+          toggleLoading(false);
+        })
+    });
+
+    // Initializing data with localStorage content
+    const data = getData();
+
+    if (data) {
+      $('#api-key').val(data.apiKey);
+
+      $('#prompt').val(data.prompt);
+
+      $('#model').val(data.model);
+      $('#tokens').val(data.max_tokens);
+      $('#temperature').val(data.temperature)
+    }
+  </script>
+
+</body>
+
+</html>
